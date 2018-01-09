@@ -8,10 +8,7 @@ samples = []
 images = []
 measurements = []
 DATA_ROOT = 'data'
-correction = 0 #float(sys.argv[1])
-include_left_right = False
-augment_image = False
-print("with correction " + repr(correction))
+augment_image = True
 
 with open(DATA_ROOT+'/driving_log.csv') as csvfile:
 		reader = csv.reader(csvfile)
@@ -49,23 +46,15 @@ def generator(generator_samples, batch_size=32):
 			for batch_sample in batch_samples:
 				center_image = process_image(batch_sample[0])
 				center_angle = float(batch_sample[3])
-				images.extend([center_image, np.fliplr(center_image)])
-				angles.extend([center_angle, -center_angle])
-				
+				images.extend([center_image, np.fliplr(center_image)]) 	# flip the image as if driving other side
+				angles.extend([center_angle, -center_angle])		# flip the angle too since steering angle changes too
+			
+				# Only augment those images where a steering occurs, since our data set is low for on those inputs	
 				if augment_image and center_angle != 0:
 					augmented_image = augment(batch_sample[0])
 					images.extend([augmented_image, np.fliplr(augmented_image)])
 					angles.extend([center_angle, -center_angle])
 
-				if include_left_right:
-					left_image = process_image(batch_sample[1])
-					right_image = process_image(batch_sample[2])				
-					left_angle = center_angle + correction
-					right_angle = center_angle - correction
-					images.extend([left_image, np.fliplr(left_image), right_image, np.fliplr(right_image)])
-					angles.extend([left_angle, -left_angle, right_angle, -right_angle])
-
-		# trim image to only see section with road
 		X_train = np.array(images)
 		y_train = np.array(angles)
 		yield sklearn.utils.shuffle(X_train, y_train)
